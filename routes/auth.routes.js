@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const User = require("../models/User.model")
 const bcrypt = require("bcryptjs")
+const isLogged = require("../middleware/auth")
 
 router.get("/signup", (req, res, next)=>{
     res.render("auth/signup")
@@ -27,7 +28,11 @@ router.post('/login', async (req, res, next)=>{
         const {username, password} = req.body
         const foundUser = await User.findOne({username})
         const validatedPassword = await bcrypt.compare(password, foundUser.password)
-        console.log(validatedPassword)
+
+        if(validatedPassword === false){
+            res.render("auth/login", {error: "Contraseña mala"})
+            return
+        }
 
         req.session.user = {
             _id: foundUser._id,
@@ -35,19 +40,23 @@ router.post('/login', async (req, res, next)=>{
             username: foundUser.username
         }
 
-        req.session.save(() => {
-            res.redirect('/')
-        })
-        console.log('algo');
+
+        req.session.save(() =>res.redirect('/auth/private'))
+    
     } catch (error) {
         next(error)
-    }
-
-
-
-
-    
+    }    
 
 })
+
+
+router.get("/main", isLogged ,(req, res, next)=>{
+    res.render("private/main")
+})
+
+router.get("/private", isLogged ,(req, res, next)=>{
+    res.render("private/private")
+})
+
 
 module.exports = router
